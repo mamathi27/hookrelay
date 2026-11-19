@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HookRelay — Reliable Webhook Delivery & Retry Engine</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 20px; color: #1e293b; line-height: 1.6; }
+    h1 { color: #0f172a; margin-bottom: 4px; }
+    .badge { display: inline-block; background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-right: 6px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; }
+    th { background: #f8fafc; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.9rem; }
+    .box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-top: 20px; }
+    input, textarea { width: 100%; padding: 8px; margin: 6px 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: monospace; box-sizing: border-box; }
+    button { background: #0f172a; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>HookRelay</h1>
+  <p>Reliable, idempotent event-driven webhook delivery &amp; retry engine built with Java &amp; Spring Boot.</p>
+  <div>
+    <span class="badge">Java 21+</span>
+    <span class="badge">Spring Boot</span>
+    <span class="badge">Spring Data JPA</span>
+    <span class="badge">HMAC-SHA256</span>
+    <span class="badge">JUnit 5 (8.39 ms avg latency)</span>
+    <a href="https://github.com/mamathi27/hookrelay" target="_blank">View Source on GitHub &rarr;</a>
+  </div>
+
+  <h2>REST API Specification</h2>
+  <table>
+    <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+    <tr><td><code>POST</code></td><td><code>/api/v1/subscriptions</code></td><td>Register a subscriber callback URL, event type, and HMAC secret</td></tr>
+    <tr><td><code>GET</code></td><td><code>/api/v1/subscriptions</code></td><td>List all registered webhook subscriptions</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/v1/events</code></td><td>Ingest event with <code>Idempotency-Key</code> header</td></tr>
+    <tr><td><code>GET</code></td><td><code>/api/v1/deliveries?status=DEAD_LETTER</code></td><td>Inspect delivery attempts &amp; Dead-Letter Queue</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/v1/deliveries/{id}/replay</code></td><td>Replay failed delivery &amp; reset circuit breaker</td></tr>
+  </table>
+
+  <div class="box">
+    <h3>Live HMAC-SHA256 Signature Verifier</h3>
+    <label>Secret Key</label>
+    <input id="sec" value="super_secret_key" />
+    <label>Unix Timestamp</label>
+    <input id="ts" value="1731974400" />
+    <label>JSON Payload</label>
+    <textarea id="pay" rows="2">{"orderId":101,"amount":499}</textarea>
+    <button onclick="computeHmac()">Generate X-Webhook-Signature</button>
+    <p><strong>Header Output:</strong> <code id="out">Click button to compute</code></p>
+  </div>
+
+  <script>
+    async function computeHmac() {
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey("raw", enc.encode(document.getElementById("sec").value), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+      const data = enc.encode(document.getElementById("ts").value + "." + document.getElementById("pay").value);
+      const sig = await crypto.subtle.sign("HMAC", key, data);
+      const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
+      document.getElementById("out").textContent = "sha256=" + hex;
+    }
+  </script>
+</body>
+</html>
